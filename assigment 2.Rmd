@@ -1,0 +1,106 @@
+---
+title: "Assigment 2"
+author: "Rueben Campbells4626341" 
+date: "08/06/2021"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(scales)
+library(skimr)
+theme_set(theme_light())
+```
+```{r}
+thanksgiving_meals<-read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2018/2018-11-20/thanksgiving_meals.csv")
+```
+#1. Display the first 10 rows of the dataset using RMarkdown
+```{r}
+thanksgiving_meals%>%head(10)
+```
+#Use `fct_reorder` and `parse_number` functions to create a factor variable `family_income`
+```{r}
+thanksgiving_meals%>%
+mutate(family_income = fct_reorder(family_income, parse_number(family_income)))
+```
+#Generate the general statistics of the dataset using `summary()` and `skim()` function
+```{r}
+thanksgiving_meals%>%summary()
+thanksgiving_meals%>%skim()
+```
+#What is the number of people who celebrate?
+```{r}
+thanksgiving_meals%>%count(celebrate,sort = TRUE)
+```
+#What are categories and stats for each main dish served and the method it is prepared?
+```{r}
+statistics<-thanksgiving_meals%>%
+count(main_dish,main_prep,sort = TRUE)
+```
+#Create a data viz showing this in the most evident way. Provide your own legend and use themes.
+```{r}
+statistics%>%ggplot(aes(n,main_dish,fill=main_prep))+geom_col()+theme(legend.position = "top")
+```
+#How many use cranberry sauce? How many use gravy?
+```{r}
+thanksgiving_meals%>%count(gravy,sort = TRUE)
+thanksgiving_meals%>%count(cranberry,sort = TRUE)
+```
+# What is the distribution of those who celebrate across income ranges
+```{r}
+income_celebrate<-thanksgiving_meals%>%
+group_by(family_income)%>%
+summarise(celebrate = sum(celebrate == "Yes"))%>%ungroup()
+```
+#Present this information in the most evident way on the data viz.
+```{r}
+income_celebrate%>%
+ggplot(aes(celebrate,family_income))+
+geom_point()
+```
+#What are the most common pies, sides, and desserts?
+```{r}
+common_food<-thanksgiving_meals%>%
+select(id, starts_with("side"),
+starts_with("pie"),
+starts_with("dessert")) %>%
+select(-side15,-pie13,-dessert12)%>%
+gather(type, value,-id)%>%
+filter(!is.na(value),
+!value %in% c("None", "Other (please specify)"))%>%
+mutate(type = str_remove(type, "\\d+"))
+common_food<-common_food%>%
+count(type,value,sort = TRUE)
+```
+#Present this information on a data viz
+```{r}
+common_food%>%
+ggplot(aes(n,value,fill = type))+
+geom_col()
+```
+#How do the servings differ by income?
+```{r}
+service<-thanksgiving_meals%>%
+select(id, starts_with("side"),
+starts_with("pie"),
+starts_with("dessert"),
+starts_with("main_dish")) %>%
+select(-side15,-pie13,-dessert12)%>%
+gather(type, food,-id)%>%
+filter(!is.na(food),
+!food %in% c("None", "Other (please specify)"))%>%
+mutate(type = str_remove(type, "\\d+"))
+service<-service%>%
+inner_join(thanksgiving_meals)%>%
+mutate(income = parse_number(family_income))%>%
+group_by(food)%>%
+summarise(family_income)%>%
+arrange(family_income)
+service<-service%>%count(food,family_income,sort = TRUE)
+```
+#Present this information on a data viz
+```{r}
+service%>%ggplot(aes(family_income,food))+geom_point()
+```
+
